@@ -1,6 +1,6 @@
 # MSBA-Capstone-Swire-Group-6
 
-Swire Coca-Cola: Predicting Customer Success
+## Swire Coca-Cola: Predicting Customer Success
 
 Description
 During my pursuit of a Masters degree at the University of Utah I had the opportunity to complete a data science project for Swire Coca Cola as a part of my capstone coursework.  During this project I had the opportunity to complete the below major components of a analytics project. 
