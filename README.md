@@ -43,7 +43,7 @@ Group or Person
 -Is the customer open during hours people normally purchase Coca Cola products?
 Once this data is augmented to the existing data set I’d recommend rerunning and revaluating the models used in this analysis.  
 
-###Credits
+### Credits
 Everything executed on this was done by Derick Lee, Kayla Smartz, Sandy White, and Brian Burdick.
 
 
