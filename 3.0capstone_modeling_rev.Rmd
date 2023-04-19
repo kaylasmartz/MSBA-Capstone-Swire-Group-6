@@ -1,0 +1,785 @@
+---
+title: "Capstone Modeling"
+author: "Brian Burdick, Derick Lee, Kayla Smartz, and Sandy White"
+date: "2023-04-13"
+output:
+  word_document:
+    toc: yes
+  html_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Business Problem Statement
+
+As one of the largest bottlers in the United States with annual revenues reading two billion dollars, Swire Coca-Cola aims to establish long-term relationships with profitable restaurants and stores in the western United States. The initial investment in setting up a new relationship with a business can be costly. Swire must also compete with other soft drink bottlers and offer a competitive price to win the contract. By being able to determine which businesses will most likely be successful, Swire can focus on attracting these customers and increase their profits. Additionally, they will also reduce the chances of establishing contracts with businesses that are more likely to fail. By analyzing the customer data supplied by Swire Coca-Cola, we aim to identify which businesses are most likely to be profitable and have longevity so that Swire can focus on attracting these types of business clients.
+
+Aim of modeling: to predict which new customers are most likely to be profitable.
+
+
+
+Beginning of EDA
+
+##############################
+######################################
+#############################################
+#####################################################
+
+
+Exploration: Questions, Plots, and interpretation
+
+
+```{r , echo=FALSE}
+data <- read.csv("Sales.csv", stringsAsFactors = FALSE) #Read in data
+customer <- read.csv("Customer.csv", stringsAsFactors = FALSE) #Read in data
+
+```
+
+
+```{r , echo=FALSE}
+library(dplyr)
+library(ggplot2)
+
+```
+
+
+
+Customer Questions
+•	How many customers does each sales office serve as a % of total?
+ This table shows that Draper Utah office accounts for 0.1124 or 11.24% of all customers in this data set.This also shows the proportion
+ of all other sales offices.
+
+```{r , echo=FALSE}
+
+cust <- table(customer$SALES_OFFICE_DESCRIPTION)
+prop.table(cust) 
+```
+
+•	How many customers does each delivery plant have?
+This is the proportion of customers served by each delivery plant.  With Draper Utah having 11.24% of all customers i find it interesting that
+the Draper delivery plant serves roughly the same percentage of customers at 11.24%
+```{r , echo=FALSE}
+del <- table(customer$DELIVERY_PLANT_DESCRIPTION)
+prop.table(del) 
+```
+
+•	What is the distribution of Activity Cluster
+54% of all distribution is from Eating&Drinking, 9.28% is Entertainment and Recreation, 2.46% is grocery stores.   I found the educational percentage to be lower then i would have expected at 3.09%.  This table shows the proportion of activity cluster.  
+
+```{r , echo=FALSE}
+custact <- table(customer$CUSTOMER_ACTIVITY_CLUSTER_DESCRIPTION)
+prop.table(custact) 
+
+```
+
+•	What is the distribution of Trade Cluster
+Full Service and Quick Service Restaurants are 16.51% and 25.48% which represents the majority of the cluster.  This percentage makes sense as to why we would want to figure out the sales and longevity of restaurants in particular.  Perhaps when we train our model we will focus our efforts on building a model to predict Full Service and Quick Service Restaurants.  During the presentation they had mentioned that the soda machines cost about $15,000 a piece and in many cases are lost if the company goes under.  Seems to me like a lot of the financial risk in the discounts they offer is whether or not they provided one of these machines?
+
+```{r , echo=FALSE}
+chan <- table(customer$CUSTOMER_TRADE_CHANNEL_DESCRIPTION)
+prop.table(chan)
+```
+
+•	What is the distribution of sub trade
+
+```{r , echo=FALSE}
+sub <- table(customer$CUSTOMER_SUB_TRADE_CHANNEL_DESCRIPTION)
+prop.table(sub)
+```
+
+•	What is the distribution of trade channel?
+This shows the proportion of the type.  Out of the QSR type i would have expected Pizza (4.19%) or Hamburger (4.33%) to be the largest proportion of customers but Mexican is at 4.46%.
+
+```{r , echo=FALSE}
+tchan <- table(customer$CUSTOMER_SUB_TRADE_CHANNEL_DESCRIPTION)
+prop.table(tchan)
+```
+
+
+Customer Data Questions
+
+•	What is the average physical volume purchased?
+The average physical volume is 36.22 but the minimum is -65832.  Are customers able to return purchased items?
+
+```{r , echo=FALSE}
+
+#Changed to numeric variables from null
+data$PHYSICAL_VOLUME <- as.numeric(data$PHYSICAL_VOLUME)
+data$DISCOUNT <- as.numeric(data$DISCOUNT)
+data$NSI <- as.numeric(data$DEAD_NET)
+data$INVOICE_PRICE <- as.numeric(data$INVOICE_PRICE)
+data$DEAD_NET <- as.numeric(data$DEAD_NET)
+data$GROSS_PROFIT_DEAD_NET <- as.numeric(data$GROSS_PROFIT_DEAD_NET)
+data$COGS <- as.numeric(data$COGS)
+
+summary(data$PHYSICAL_VOLUME)
+
+```
+
+
+
+•	What is the average discount offered?
+The mean is 1003.8 and median is 90.0  which means the graph is left skewed because the mean is to the right of the median.  
+
+```{r , echo=FALSE}
+
+summary(data$DISCOUNT)
+
+
+```
+
+
+•	What is the profit to COGS per order as a scatter plot?
+To see a better representation of this data i dropped COGS exceeding 15000 and profit of 10000 to see the plot better.  Their does to appear to be a linear relationship between the profit and cost of goods sold.  This graph suggests that the more that is sold the more linear the relationship is between profit and cogs.  As COGS increase profit also appears to be linear between 0 and 2500 
+
+```{r , echo=FALSE}
+
+subdata <-subset(data, data$COGS < 15000 & data$COGS >= 0 & data$GROSS_PROFIT_DEAD_NET < 10000 & data$GROSS_PROFIT_DEAD_NET >= 0)
+
+plot(subdata$COGS, subdata$GROSS_PROFIT_DEAD_NET,
+     main="Scatter plot between Profit and COGS",
+     xlab="COGS",
+     ylab="Profit")
+```
+
+•	What does a scatter plot look like between discount and gross profit?
+Upon doing the scatter plot on the original data set their were outliers that were obscuring the pattern between the x and y variables.  I performed a subset of the data on discount at 30,000 and profit at 10,000.  This generally shows that the larger the discount the higher the profit.  
+```{r , echo=FALSE}
+
+subdata2 <- subset(data, data$DISCOUNT < 30000 & data$DISCOUNT >= 0 & data$GROSS_PROFIT_DEAD_NET < 10000 & data$GROSS_PROFIT_DEAD_NET > 0)
+
+plot(subdata2$DISCOUNT, subdata2$GROSS_PROFIT_DEAD_NET,
+     main="Scatter plot between Profit and Discount",
+     xlab="Discount",
+     ylab="Profit")
+```
+•	What does a scatter plot look like between volume and discount?
+This shows a linear relationship between units purchased and the discount offered where the larger the volume the more of a discount is received. However their is an interesting pattern where a group of orders are showing deeper discounts given their volume purchased of individual products.
+
+```{r , echo=FALSE}
+
+subdata3 <- subset(data, data$PHYSICAL_VOLUME < 500 & data$PHYSICAL_VOLUME > 0 &  data$DISCOUNT < 25000 & data$DISCOUNT >= 0)
+
+plot(subdata3$PHYSICAL_VOLUME, subdata3$DISCOUNT,
+     main="Scatter plot between Volume and Discount",
+     xlab="Volume",
+     ylab="Discount")
+```
+
+
+
+
+
+```{r , echo=FALSE}
+
+
+
+
+#Bev_Cat color
+
+subdata3 <- subset(data, data$PHYSICAL_VOLUME < 500 & data$PHYSICAL_VOLUME > 0 &  data$DISCOUNT < 25000 & data$DISCOUNT >= 0)
+
+ggplot(subdata3, aes(PHYSICAL_VOLUME, DISCOUNT, color = BEV_CAT_DESC)) +
+  geom_point() +
+  labs(title = "Scatter plot between Volume and Discount Color BEV_CAT_DESC",
+       x = "Volume",
+       y = "Discount") +
+  theme_minimal()
+
+
+#Pack size color
+subdata3a <- subset(data, data$PHYSICAL_VOLUME < 500 & data$PHYSICAL_VOLUME > 0 &  data$DISCOUNT < 25000 & data$DISCOUNT >= 0 & BEV_CAT_DESC == "CORE SPARKLING" & CALORIE_CAT_DESC == "REGULAR CALORIE" & PACK_TYPE_DESC == "Bag-In-Box")
+
+ggplot(subdata3a, aes(PHYSICAL_VOLUME, DISCOUNT, color = PACK_SIZE_SALES_UNIT_DESCRIPTION)) +
+  geom_point() +
+  labs(title = "Scatter plot between Volume and Discount Color PACK_SIZE_SALES_UNIT_DESCRIPTION",
+       x = "Volume",
+       y = "Discount") +
+  theme_minimal()
+
+
+
+#Product Sold color
+subdata3b <- subset(data, data$PHYSICAL_VOLUME < 500 & data$PHYSICAL_VOLUME > 0 &  data$DISCOUNT < 25000 & data$DISCOUNT >= 0 & BEV_CAT_DESC == "CORE SPARKLING" & CALORIE_CAT_DESC == "REGULAR CALORIE" & PACK_TYPE_DESC == "Bag-In-Box" & PACK_SIZE_SALES_UNIT_DESCRIPTION == "5 GALLON 1-Ls")
+
+ggplot(subdata3b, aes(PHYSICAL_VOLUME, DISCOUNT, color = PRODUCT_SOLD_BLINDED)) +
+  geom_point() +
+  labs(title = "Scatter plot between Volume and Discount",
+       x = "Volume",
+       y = "Discount") +
+  theme_minimal()
+
+
+
+```
+
+•	What is number of transactions vs discount.
+I would have expected to see a linear relationship between these two variables but am not seeing the pattern.  
+
+```{r , echo=FALSE}
+
+
+subdata10 <- subset(data, data$DISCOUNT < 50000 & data$DISCOUNT >= 0 & data$NUM_OF_TRANSACTIONS >= 0 & data$NUM_OF_TRANSACTIONS <= 500)
+
+
+plot(subdata10$NUM_OF_TRANSACTIONS, subdata10$DISCOUNT,
+     main="Scatter plot between Discount and Transactions",
+     xlab="NUM_OF_TRANSACTIONS",
+     ylab="Discount")
+
+```
+
+•	What is the profit/cogs by discount as a scatter plot?
+I took the profit and divided it by cogs to get a ratio that i then created a scatter plot on volume to see what the relationship would look like between these.  As volume decreases the ratio of profit to COGS increases.  This suggests that the more volume that is purchased the better of a discount they get.
+
+```{r , echo=FALSE}
+
+data$P_Cogs <- data$GROSS_PROFIT_DEAD_NET/data$COGS
+
+  
+subdata4 <- subset(data, data$P_Cogs <= 5 & data$P_Cogs > 0 & data$PHYSICAL_VOLUME > 0 & data$PHYSICAL_VOLUME <= 1500)
+
+
+plot(subdata4$P_Cogs, subdata4$PHYSICAL_VOLUME,
+     main="Scatter plot between Profit to COGS Ratio and Discount to Volume Ratio",
+     xlab="Profit to COGS Ratio",
+     ylab="Volume")
+
+```
+
+
+•	What does a scatter plot look like between number of transactions and discount?
+Their does not appear to be a linear relationship between number of transactions and discount.  
+
+```{r , echo=FALSE}
+
+subdata32 <- subset(data, data$NUM_OF_TRANSACTIONS < 500 & data$NUM_OF_TRANSACTIONS > 0 &  data$DISCOUNT < 40000 & data$DISCOUNT >= 0)
+
+plot(subdata32$NUM_OF_TRANSACTIONS, subdata32$DISCOUNT,
+     main="Scatter plot between Volume and Discount",
+     xlab="NUM_OF_TRANSACTIONS",
+     ylab="Discount")
+
+```
+
+
+
+•	What is the top 10 best selling products in terms of profit?
+Best selling of the 10 is M014407280247 with total profit of $17,471,066	
+
+```{r , echo=FALSE}
+
+y <- sum(data$GROSS_PROFIT_DEAD_NET)
+
+x <- aggregate(GROSS_PROFIT_DEAD_NET ~ PRODUCT_SOLD_BLINDED, data=data, FUN=sum)
+
+top_n(x,n=10)
+
+```
+
+•	Who is the top 10 customers in terms of profit?
+Our best customer is C0036030908720224 and has made us $2,528,505.70
+
+```{r , echo=FALSE}
+
+#x <- aggregate(GROSS_PROFIT_DEAD_NET ~ CUSTOMER_NUMBER_BLINDED, data=data, FUN=sum)
+
+#top_n(x,n=10)
+
+```
+
+
+Results Section
+
+•	As volume decreases the ratio of profit to COGS increases.  This suggests that the more volume that is purchased the better of a discount they get.This seemed like a strong correlation overall.
+•	Draper Utah office accounts for 0.1224 or 12.24% of all customers in this data set
+•	Data Problems: I've found negative values in discounts, quantity and other fields numeric fields.  
+•	Out of the QSR type i would have expected Pizza (4.64%) or Hamburger (4.04%) to be the largest proportion of customers but Mexican is at 6.8%.
+•	Full Service and Quick Service Restaurants are 31.68% and 25.36% which represents the majority of the cluster.  This percentage makes sense as to why we would want to figure out the sales and longevity of restaurants in particular.  Perhaps when we train our model we will focus our efforts on building a model to predict Full Service and Quick Service Restaurants.  During the presentation they had mentioned that the soda machines cost about $15,000 a piece and in many cases are lost if the company goes under.  Seems to me like a lot of the financial risk in the discounts they offer is whether or not they provided one of these machines.  How this EDA influenced my analytical approach is if we should use the whole data set to build our model or to just focus on the Restaurant segment.  
+
+
+Ethical Considerations
+If I were Swire I would have had the students sign an NDA or Non Compete agreement. With having the lat and long, discount amount, units, and date of order one could come up with a pretty good idea as to the business name, business model, and where to open up a competing shop.  
+
+
+
+END OF EDA
+
+##############################
+######################################
+#############################################
+#####################################################
+
+Correlations
+```{r na_values }
+#Importing Data and merging the customer and sales data together.
+data <- merge(read.csv("Customer.csv"),read.csv("Sales.csv"))
+
+#Creating a data frame
+data_df <- data.frame(data)
+
+#Converting on boarding date variable to a date and then to a numeric number for Days and years a customer.
+data_df$ON_BOARDING_DATE <- as.Date(data_df$ON_BOARDING_DATE, origin = "yyyy-mm-dd")
+data_df$ON_BOARDING_DATE <- as.numeric(data_df$ON_BOARDING_DATE)
+
+December_31_2022 <- as.Date("2022-12-31", origin = "yyyy-mm-dd")
+December_31_2022 <- as.numeric(December_31_2022)
+
+data_df$DAYS_A_CUSTOMER <- December_31_2022 - data_df$ON_BOARDING_DATE
+
+data_df$YEARS_A_CUSTOMER <- data_df$DAYS_A_CUSTOMER/365
+
+# Adding a non-linear relationship
+data_df$YEARS_A_CUSTOMER2 <- data_df$YEARS_A_CUSTOMER^2
+
+#Creating new calculated variables
+data_df$DISCOUNT_PER_TRANSACTION <- data_df$DISCOUNT/data_df$NUM_OF_TRANSACTIONS
+
+data_df$DISCOUNT_PER_PHYSICAL_VOLUME <- data_df$DISCOUNT/data_df$PHYSICAL_VOLUME
+
+data_df$PHYSICAL_VOLUME_PER_NUM_OF_TRANSACTION <- data_df$PHYSICAL_VOLUME/data_df$NUM_OF_TRANSACTIONS
+
+data_df$DEAD_NET_PER_PHYSICAL_VOLUME <- data_df$DEAD_NET/data_df$PHYSICAL_VOLUME
+
+data_df$DEAD_NET_PER_NUM_OF_TRANSACTION <- data_df$DEAD_NET/data_df$NUM_OF_TRANSACTIONS
+
+data_df$LOG_GROSS_PROFIT_DEAD_NET <- log(data_df$DEAD_NET)+1
+
+#Creating factor variables vs character variables
+data_df[c(2,7,10,11,12,14,15,16)] <- data.frame(lapply(data_df[c(2,7,10,11,12,14,15,16)],factor))
+
+#Removing un-desirable variables
+data_df <- rbind(within(data_df, rm('ï..CUSTOMER_NUMBER_BLINDED', 'DELIVERY_PLANT_DESCRIPTION', 'ADDRESS_CITY', 'COUNTY', 'BUSINESS_TYPE_EXTENSION_DESCRIPTION', 'CUSTOMER_TRADE_CHANNEL_DESCRIPTION2', 'MARKET_DESCRIPTION', 'CALORIE_CAT_DESC', 'PACK_SIZE_SALES_UNIT_DESCRIPTION', 'MIN_POSTING_DATE', 'MAX_POSTING_DATE', 'ON_BOARDING_DATE', 'ADDRESS_ZIP_CODE')))
+
+data_df[c(9,10)] <- data.frame(lapply(data_df[c(9,10)],factor))
+
+#Transforming blank, Nan, and inf data
+data_df$SALES_OFFICE_DESCRIPTION[is.nan(data_df$SALES_OFFICE_DESCRIPTION)] <- "None"
+
+data_df$BEV_CAT_DESC[is.nan(data_df$BEV_CAT_DESC)] <- "None"
+
+data_df$DISCOUNT_PER_PHYSICAL_VOLUME[is.nan(data_df$DISCOUNT_PER_PHYSICAL_VOLUME)] <- 0
+
+data_df$DISCOUNT_PER_PHYSICAL_VOLUME[is.infinite(data_df$DISCOUNT_PER_PHYSICAL_VOLUME)] <- 0
+
+data_df$DEAD_NET_PER_PHYSICAL_VOLUME[is.nan(data_df$DEAD_NET_PER_PHYSICAL_VOLUME)] <- 0
+
+data_df$DEAD_NET_PER_PHYSICAL_VOLUME[is.infinite(data_df$DEAD_NET_PER_PHYSICAL_VOLUME)] <- 0
+
+data_df$GEO_LONGITUDE[is.nan(data_df$GEO_LONGITUDE)] <- 0
+
+data_df$GEO_LONGITUDE[is.infinite(data_df$GEO_LONGITUDE)] <- 0
+
+data_df$GEO_LATITUDE[is.nan(data_df$GEO_LATITUDE)] <- 0
+
+data_df$GEO_LATITUDE[is.infinite(data_df$GEO_LATITUDE)] <- 0
+
+data_df$PHYSICAL_VOLUME[is.nan(data_df$PHYSICAL_VOLUME)] <- 0
+
+data_df$PHYSICAL_VOLUME[is.infinite(data_df$PHYSICAL_VOLUME)] <- 0
+
+data_df$DISCOUNT[is.nan(data_df$DISCOUNT)] <- 0
+
+data_df$DISCOUNT[is.infinite(data_df$DISCOUNT)] <- 0
+
+data_df$LOG_GROSS_PROFIT_DEAD_NET[is.nan(data_df$LOG_GROSS_PROFIT_DEAD_NET)] <- 0
+
+data_df$LOG_GROSS_PROFIT_DEAD_NET[is.infinite(data_df$LOG_GROSS_PROFIT_DEAD_NET)] <- 0
+
+correlation <- cor(data_df[c("GEO_LONGITUDE", "GEO_LATITUDE", "PHYSICAL_VOLUME", "DISCOUNT", "INVOICE_PRICE", "DEAD_NET", "GROSS_PROFIT_DEAD_NET", "COGS", "NUM_OF_TRANSACTIONS", "DAYS_A_CUSTOMER", "YEARS_A_CUSTOMER", "DISCOUNT_PER_TRANSACTION", "DISCOUNT_PER_PHYSICAL_VOLUME", "PHYSICAL_VOLUME_PER_NUM_OF_TRANSACTION", "DEAD_NET_PER_PHYSICAL_VOLUME", "DEAD_NET_PER_NUM_OF_TRANSACTION", "LOG_GROSS_PROFIT_DEAD_NET", "YEARS_A_CUSTOMER2")])
+
+correlation
+
+round(correlation,2)
+
+correlation1 <- correlation
+
+#Renaming variables to fit on Correlation Plot
+colnames(correlation1)[colnames(correlation1) == "GEO_LONGITUDE"] ="A1"
+
+colnames(correlation1)[colnames(correlation1) == "GEO_LATITUDE"] ="B1"
+
+colnames(correlation1)[colnames(correlation1) == "PHYSICAL_VOLUME"] ="C1"
+
+colnames(correlation1)[colnames(correlation1) == "DISCOUNT"] ="D1"
+
+colnames(correlation1)[colnames(correlation1) == "INVOICE_PRICE"] ="E1"
+
+colnames(correlation1)[colnames(correlation1) == "DEAD_NET"] ="F1"
+
+colnames(correlation1)[colnames(correlation1) == "GROSS_PROFIT_DEAD_NET"] ="G1"
+
+colnames(correlation1)[colnames(correlation1) == "NUM_OF_TRANSACTIONS"] ="H1"
+
+colnames(correlation1)[colnames(correlation1) == "DAYS_A_CUSTOMER"] ="I1"
+
+colnames(correlation1)[colnames(correlation1) == "YEARS_A_CUSTOMER"] ="J1"
+
+colnames(correlation1)[colnames(correlation1) == "DISCOUNT_PER_TRANSACTION"] ="K1"
+
+colnames(correlation1)[colnames(correlation1) == "DISCOUNT_PER_PHYSICAL_VOLUME"] ="L1"
+
+colnames(correlation1)[colnames(correlation1) == "PHYSICAL_VOLUME_PER_NUM_OF_TRANSACTION"] ="M1"
+
+colnames(correlation1)[colnames(correlation1) == "DEAD_NET_PER_PHYSICAL_VOLUME"] ="N1"
+
+colnames(correlation1)[colnames(correlation1) == "DEAD_NET_PER_NUM_OF_TRANSACTION"] ="O1"
+
+colnames(correlation1)[colnames(correlation1) == "LOG_GROSS_PROFIT_DEAD_NET"] ="P1"
+
+colnames(correlation1)[colnames(correlation1) == "YEARS_A_CUSTOMER2"] ="Q1"
+
+#install.packages("corrplot")
+
+library(corrplot)
+
+corrplot(correlation1, method="circle")
+
+# correlogram with hclust reordering
+corrplot(correlation1, type="upper", order="hclust")
+```
+
+
+```{r, echo=FALSE}
+# Load required libraries for cleaning and models
+library(tidymodels)
+library(xgboost)
+library(dplyr)
+library(tidyverse)
+library(fastDummies)
+library(glmnet)
+library(caret)
+```
+
+```{r, echo=FALSE}
+knitr::knit_hooks$set(time_it = local({
+  now <- NULL
+  function(before, options) {
+    if (before) {
+      # record the current time before each chunk
+      now <<- Sys.time()
+    } else {
+      # calculate the time difference after a chunk
+      res <- difftime(Sys.time(), now)
+      # return a character string to show the time
+      paste("Time for this code chunk to run:", res)
+    }
+  }
+}))
+```
+
+```{r, echo=FALSE}
+
+library(doParallel)
+registerDoParallel(cores = 8)
+
+
+```
+
+```{r, echo=FALSE}
+#Create three-year profit variable by summing GROSS_PROFIT_DEAD_NET by customer ID and multiply by 1.5
+Final_customer_data <- read.csv("Final_customer_data.csv")
+FSOP_Customer_Data <- read.csv("FSOP_Customer_Data.csv")
+FSOP_Sales_Data_rev <- read.csv("FSOP_Sales_Data_rev.csv")
+#zip_fips_crosswalk <- read.csv("zip_fips_crosswalk.csv")
+urban_zip <- read.csv("urban_zip.csv")
+
+library(tidymodels)
+library(xgboost)
+library(dplyr)
+library(tidyverse)
+library(fastDummies)
+library(glmnet)
+library(caret)
+
+sales_data_sum <- FSOP_Sales_Data_rev %>%
+  group_by(CUST_NUMBER) %>%
+  mutate(total_profit = sum(GROSS_PROFIT_DEAD_NET)) %>%
+  filter(row_number(CUST_NUMBER) == 1)
+
+sales_data_subset = subset(sales_data_sum, select = c(CUST_NUMBER, total_profit))
+
+sales_data_subset$three_yr_tot_profit = sales_data_subset$total_profit * 1.5
+
+```
+
+```{r, echo=FALSE}
+#Merge sales data with final dataset collapsed and keep only continuous three-yr total profit variables
+
+
+final_data = merge(Final_customer_data, sales_data_subset, by="CUST_NUMBER")
+
+final_data %>%
+  summarise(med_profit=median(three_yr_tot_profit), quartile_profit=quantile(three_yr_tot_profit, c(0.25, 0.5, 0.75)), q = c(0.25, 0.5, 0.75))
+
+```
+
+#Modeling approaches: 
+I will attempt three different models: XGBoost using a classification tree focusing on customers that made a profit (>median profit) due to poor performance using a continuous outcome in XGBoost. I will evaluate performance using AUC for this classification model. I will also attempt a linear regression using a log-transformed outcome variable (ln_three_yr_profit) and use RMSE for evaluation. 
+
+# Model Approach: XG Boost 
+
+##Data cleaning and transformation
+
+In Excel, the following data transformations were performed:
+
+Creation of one customer activity cluster that encompasses the subtrade cluster to eliminate collinearity between variables.
+
+Creation of unique package, product purchase, and package size since these would most likely be discussed in setting up a new client. These were variables that were the distinct number of package size, package type, and unique products purchased by each customer. 
+
+Created a three-year profit by summing two years of profits and multiplying by 1.5.
+
+Included data from USDA on population and type of location (large metro, small metro, etc.)
+
+Created dichotomous outcome for three_yr_profit based on the median: Any positive profit above median = 1, otherwise 0.
+
+
+```{r, echo=FALSE}
+
+#Dataset manipulation--merge USDA data with main dataset.  Remove variables not of interest. To prepare dataset for XG Boost
+
+swire_all = subset(final_data, select = -c(CUST_NUMBER, SALES_OFFICE_DESCRIPTION,DELIVERY_PLANT_DESCRIPTION, ON_BOARDING_DATE, ADDRESS_CITY, total_profit) )
+#colnames(swire_all)[1] ="zip"
+
+swire_all_zip <- merge(x=swire_all,y=urban_zip, 
+             by = c("zip", "county"))
+
+#Urban code--create factor
+
+swire_all_zip$urban_code <- factor(swire_all_zip$urban_code,
+                                   levels = c(1,2,3,4,5),
+                                   labels = c("Large Metro","Small Metro","Adj Lg Metro","Adj Sm Metro","Other"))
+
+##To improve XGBoost performance, create dichotomous variable for profit--identifying those who made a profit above median vs. those who didn't
+
+swire_all_zip = swire_all_zip %>%
+  mutate(profit_quart = case_when(three_yr_tot_profit <= 419 ~ 1,
+                              three_yr_tot_profit > 419 & three_yr_tot_profit <= 2160 ~ 2,
+                              three_yr_tot_profit > 2160 & three_yr_tot_profit <= 6816 ~ 3,
+                              three_yr_tot_profit > 6816 ~ 4),
+         cust_long_group = case_when(cust_longevity < 1 ~ "< 1 yr",
+                                     cust_longevity >= 1 & cust_longevity < 5 ~ "1-5 yrs",
+                                     cust_longevity >= 5 ~ ">5 yrs"))
+
+swire_all_zip$profit_quart = as.factor(swire_all_zip$profit_quart)
+
+
+swire_all_zip_xg = subset(swire_all_zip, select = -c(three_yr_tot_profit, cust_longevity, county, zip, state.y))
+                                                  
+```
+
+##Create dummy variables
+
+```{r, echo=FALSE}
+
+library(fastDummies)
+
+swire_dummies = dummy_cols(swire_all_zip_xg, select_columns = c("cust_activity_cluster_desc", "cust_trade_channel_desc", "business_type_desc", "market_desc", "urban_code", "state.x", "cust_long_group"), remove_first_dummy = TRUE, remove_selected_columns = TRUE)
+
+#swire_dummies_subset = sample_n(swire_dummies, 10000)
+```
+
+##Split into training and test datasets using 80/20 split
+
+```{r, echo=FALSE}
+#In 20/20 split to be able to Knit document
+set.seed(1234)
+swire_testtrn <- initial_split(swire_dummies, prop = 0.2,
+                               strata = profit_quart)
+swire_train <- training(swire_testtrn)
+
+swire_testtrn1 <- initial_split(swire_dummies, prop = 0.8,
+                               strata = profit_quart)
+swire_test  <- testing(swire_testtrn1)
+
+```
+
+# Modeling
+
+Set up model parameters and tuning hyperparameters. Use five-fold cross-validation
+
+```{r, echo=FALSE}
+#Create recipe
+rec_swire <- recipe(profit_quart ~ ., swire_train) %>% 
+  prep(training = swire_train)
+
+#Set model using boost_tree
+model_new_cust <- boost_tree(
+                     trees = tune(),
+                     tree_depth = tune(),
+                     learn_rate = tune()) %>% 
+                     set_engine("xgboost", verbosity = 0) %>% 
+                     set_mode("classification")
+
+#Tune the hyperparameter grid
+hyper_grid <- grid_regular(
+  trees(),
+  tree_depth(),
+  learn_rate(),
+  levels = 4)
+
+new_cust_folds <- vfold_cv(swire_train, v=5)
+```
+
+
+```{r, echo=FALSE, time_it=TRUE}
+
+#Aggregate all information to fit the model and use it for prediction
+swire_wf <- workflow() %>%
+  add_model(model_new_cust) %>%
+  add_recipe(rec_swire)
+
+
+# We can now compute the performance metric (AUC) of our model for each of the 64 possible hyperparameter combinations.
+
+set.seed(123)
+swire_tune <- 
+  swire_wf %>% 
+  tune_grid(
+    resamples = new_cust_folds,
+    grid = hyper_grid,
+    metrics = metric_set(roc_auc)
+  ) 
+
+
+# We use `select_best("roc_auc")` to pick the best hyperparameter combination.
+
+best_model <- swire_tune %>%
+  select_best("roc_auc")
+
+best_model
+```
+
+
+```{r, echo=FALSE}
+#Use best model for fit
+
+final_workflow <- 
+  swire_wf %>% 
+  finalize_workflow(best_model)
+
+final_fit <- 
+  final_workflow %>%
+  last_fit(split = swire_testtrn) 
+
+final_fit %>%
+  collect_predictions() %>%
+  conf_mat(truth = profit_quart, estimate = .pred_class)
+
+final_fit %>%
+  collect_metrics()
+
+```
+
+```{r, echo=FALSE}
+
+library(vip)
+final_workflow %>%
+  fit(data = swire_train) %>%
+  extract_fit_parsnip() %>%
+  vip(geom = "point")
+```
+
+```{r, echo=FALSE}
+
+## Now, plot graphs using the most influential variables 
+
+library(DALEXtra)
+model_fitted <- final_workflow %>%
+  fit(data = swire_train)
+explainer_rf <- explain_tidymodels(model_fitted, 
+                                   data = swire_train[,],
+                                   y = swire_train$profit_quart, 
+                                   type = "pdp",verbose = FALSE)
+
+pdp_bus_type_desc_DSD <- model_profile(explainer_rf,
+                             variables = "business_type_desc_DSD", 
+                             N=NULL)
+
+#pdp_population <- model_profile(explainer_rf,
+                             #variables = "population", 
+                             #N=NULL)
+
+pdp_bus_type_desc_equip <- model_profile(explainer_rf,
+                             variables = "business_type_desc_EQUIP_ONLY", 
+                             N=NULL)
+
+pdp_bus_type_desc_second_vol <- model_profile(explainer_rf,
+                                variables = "business_type_desc_SECOND_VOL",
+                                N=NULL)
+                             
+
+plot(pdp_bus_type_desc_equip)
+
+plot(pdp_bus_type_desc_second_vol)
+
+plot(pdp_bus_type_desc_DSD)
+
+#plot(pdp_population)
+
+```
+# Model approach: Linear Regression
+
+##Data cleaning and transformation
+
+In Excel, the following data transformations were performed:
+
+Creation of one customer activity cluster that encompasses the subtrade cluster to eliminate collinearity between variables.
+
+Creation of unique package, product purchase, and package size since these would most likely be discussed in setting up a new client.
+
+Created a three-year profit by summing two years of profits and multiplying by 1.5. Used log-transformed variable to account for skewness in data.
+
+Included data from USDA on population and type of location (large metro, small metro, etc.)
+
+##Remove non-relevant variables
+```{r, echo=FALSE}
+
+swire_all_zip_lr = swire_all_zip
+
+hist(swire_all_zip_lr$three_yr_tot_profit)
+
+swire_all_zip_lr$three_yr_tot_profit_cor = swire_all_zip_lr$three_yr_tot_profit + 0.01
+
+swire_all_zip_lr$ln_three_yr_profit = log(swire_all_zip_lr$three_yr_tot_profit_cor)
+
+swire_all_zip_lr = subset(swire_all_zip_lr, select = -c(zip, county, state.y, profit_quart, cust_longevity, three_yr_tot_profit, three_yr_tot_profit_cor, urban_code, state.x))
+
+```
+
+##Create dummy variables
+
+```{r, echo=FALSE}
+
+library(fastDummies)
+
+swire_dummies = dummy_cols(swire_all_zip_lr, select_columns = c("cust_activity_cluster_desc", "cust_trade_channel_desc", "business_type_desc", "market_desc"), remove_first_dummy = TRUE, remove_selected_columns = TRUE)
+
+```
+
+##Split into training and test datasets using 80/20 split
+
+```{r, echo=FALSE}
+set.seed(1234)
+swire_testtrn <- initial_split(swire_dummies, prop = 0.8,
+                               strata = ln_three_yr_profit)
+swire_train <- training(swire_testtrn)
+swire_test  <- testing(swire_testtrn)
+
+
+```
+
+##Model 1 
+
+```{r, echo=FALSE}
+model1<- lm(ln_three_yr_profit~.,swire_train) #Train model
+summary(model1)
+predictL <- predict(model1, data = swire_test) #Test model 
+RMSE_val = RMSE(predictL, swire_test$ln_three_yr_profit, na.rm = FALSE) #Model Metric
+hist(model1$residuals)
+
+```
+
