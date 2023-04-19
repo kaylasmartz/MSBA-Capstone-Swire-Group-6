@@ -3,7 +3,7 @@
 ### Swire Coca-Cola: Predicting Customer Success
 
 ### Description
-During my pursuit of a Masters degree at the University of Utah I had the opportunity to complete a data science project for Swire Coca Cola as a part of my capstone coursework.  During this project I had the opportunity to complete the below major components of a analytics project. 
+During our Masters degree program at the University of Utah we had the opportunity to complete a data science project for Swire Coca Cola as a part of our capstone coursework.  During this project we had the opportunity to complete the below major components of an analytics project. 
 - Business Problem
 - Analytical Objective
 - Exploratory Data Analysis
@@ -19,10 +19,10 @@ During my pursuit of a Masters degree at the University of Utah I had the opport
 
 ### Challenges
 There were two challenges that were reoccurring throughout this project.
-Multiple variables were highly correlated to our output variable that we would not have prior to the sales pitch Swire would give to prospects.  Many of these highly correlated variables were tied to historic orders of customers.  I chose to get rid of all of these predictors because they would artificially raise my prediction accuracy. 
-Most of the predictor variables used in the final model was categorical variables which did not lend itself well to getting an accurate prediction from my linear model.  All though there were other models that could predict better they tended to take so long to calculate that field deployment would most likely not be feasible.  
+Multiple variables were highly correlated to our output variable that we would not have prior to the sales pitch Swire would give to prospects.  Many of these highly correlated variables were tied to historic orders of customers.  We chose to get rid of all of these predictors because they would artificially raise our prediction accuracy. 
+Most of the predictor variables used in the final model were categorical variables which did not lend itself well to getting an accurate prediction from the linear model.  All though there were other models that could predict better they tended to take so long to calculate that field deployment would most likely not be feasible.  
 ### Next Steps
-My recommended next steps are to look into gaining additional data to augment your existing data.  The data I’d recommend gathering includes. 
+My recommended next steps are to look into gaining additional data to augment your existing data.  The data we’d recommend gathering includes:
 Group or Person
 -How many years of business experience?
 -Do they own multiple businesses?
